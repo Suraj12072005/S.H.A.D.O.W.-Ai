@@ -1,7 +1,7 @@
 # SHADOW-AI 🤖✨
 Smart Humanized AI-Driven Online Workflow Assistant
 
-SHADOW-AI is a futuristic virtual assistant capable of understanding voice/text commands, answering questions using AI, performing system automation, generating images, and much more — all wrapped in a modern UI dashboard.
+SHADOW-AI is a futuristic smart humanized AI-powered virtual assistant capable of understanding voice/text commands, answering questions using AI, performing system automation, generating images, and much more — all wrapped in a modern UI dashboard.
 
 ---
 
