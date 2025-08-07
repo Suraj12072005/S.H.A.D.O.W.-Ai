@@ -30,11 +30,6 @@ from Backend.SpeechToText import SpeechRecognition
 from Backend.Chatbot import ChatBot
 from Backend.TextToSpeech import TextToSpeech
 from dotenv import dotenv_values
-from asyncio import run
-from time import sleep
-import subprocess
-import threading
-import json
 import os
 
 # Load environment variables
