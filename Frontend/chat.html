@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SHADOW AI - Neural Interface</title>
+  <link rel="stylesheet" href="static/style.css">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #0b0c1c;
+      --neon-cyan: #00fff2;
+      --neon-purple: #a020f0;
+      --neon-blue: #00bfff;
+      --text-light: #ffffff;
+      --glass-bg: rgba(255, 255, 255, 0.05);
+      --glass-border: rgba(0, 255, 255, 0.2);
+      --font-orbitron: "Courier New", monospace;
+      --font-rajdhani: "Courier New", monospace;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: "Courier New", monospace;
+      background: linear-gradient(120deg, #0b0c1c, #141638);
+      color: var(--text-light);
+      height: 100vh;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 280px;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(20px);
+      border-right: 1px solid var(--glass-border);
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 2rem;
+    }
+
+    .brand-icon {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(to right, var(--neon-cyan), var(--neon-purple));
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+
+
+
+
+
+
+    .new-session {
+      padding: 0.75rem;
+      background: rgba(155, 48, 255, 0.1);
+      border: 1px solid var(--neon-purple);
+      border-radius: 0.75rem;
+      color: var(--neon-purple);
+      margin-bottom: 1rem;
+      cursor: pointer;
+      text-align: center;
+    }
+
+    .new-session:hover {
+      background: rgba(155, 48, 255, 0.2);
+    }
+
+    .session-title {
+      font-family: var(--font-orbitron);
+      font-size: 0.9rem;
+      color: var(--neon-cyan);
+      margin-bottom: 0.75rem;
+    }
+
+    .chat-sessions {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      overflow-y: auto;
+    }
+
+    .chat-session {
+      padding: 0.75rem;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(0, 255, 255, 0.1);
+      border-radius: 0.75rem;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    .chat-session:hover {
+      border-color: var(--neon-cyan);
+    }
+
+    .chat-session.active {
+      border-color: var(--neon-cyan);
+      background: rgba(0, 255, 255, 0.1);
+    }
+
+    .chat-session p {
+      font-size: 0.85rem;
+    }
+
+    .chat-session small {
+      color: rgba(0, 255, 255, 0.5);
+    }
+
+    /* Profile */
+    .profile {
+      margin-top: 1.5rem;
+      padding: 1rem;
+      border: 1px solid var(--glass-border);
+      border-radius: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      background: rgba(0, 0, 0, 0.4);
+    }
+
+    .profile-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(to right, var(--neon-cyan), var(--neon-purple));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+    }
+
+    .profile-info p {
+      font-weight: 600;
+    }
+
+    .profile-info small {
+      color: rgba(0, 255, 255, 0.6);
+    }
+
+    /* Main Content */
+
+    .main {
+      flex: 1;
+      margin-top: 5%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .main-header {
+      padding: 1rem;
+      text-align: center;
+      border-bottom: 1px solid var(--glass-border);
+    }
+
+    .main-header h2 {
+      font-family: var(--font-orbitron);
+      font-size: 1.2rem;
+      color: var(--neon-blue);
+    }
+
+    .main-header small {
+      color: rgba(0, 255, 255, 0.6);
+    }
+
+    .messages-container {
+      flex: 1;
+      padding: 1.5rem;
+      overflow-y: auto;
+    }
+
+    .message {
+      margin-bottom: 1rem;
+      display: flex;
+    }
+
+    .message.user {
+      justify-content: flex-end;
+    }
+
+    .message.assistant {
+      justify-content: flex-start;
+    }
+
+    .bubble {
+      max-width: 70%;
+      padding: 1rem;
+      border-radius: 0.75rem;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--glass-border);
+    }
+
+    .user .bubble {
+      color: var(--neon-cyan);
+    }
+
+    .assistant .bubble {
+      color: var(--neon-purple);
+    }
+
+    .input-area {
+      display: flex;
+      padding: 1rem;
+      border-top: 1px solid var(--glass-border);
+      gap: 0.75rem;
+    }
+
+    .message-input {
+      flex: 1;
+      padding: 0.75rem;
+      border-radius: 0.5rem;
+      border: 1px solid var(--glass-border);
+      background: rgba(0, 0, 0, 0.4);
+      color: var(--text-light);
+    }
+
+    .send-btn {
+      padding: 0.75rem 1rem;
+      border: none;
+      border-radius: 0.5rem;
+      background: linear-gradient(to right, var(--neon-cyan), var(--neon-purple));
+      color: #fff;
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body>
+  <nav class="top-navbar">
+    <div class="nav-left">
+      <h1 class="nav-title">SHADOW AI</h1>
+    </div>
+    <div class="nav-center">
+      <a href="/" class="nav-link">Home</a>
+      <a href="/about" class="nav-link">About</a>
+      <a href="/versions" class="nav-link">Version</a>
+      <a href="/admin" class="nav-link">Admin Panel</a>
+      <a href="/chat" class="nav-link">Chat</a>
+      <a href="/login" class="nav-link">Login</a>
+    </div>
+
+    <div class="nav-right">
+      <div class="nav-profile">
+        <div class="status-indicator" id="aiStatus"></div>
+      </div>
+    </div>
+  </nav>
+
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="brand">
+      <div class="brand-icon">⚡</div>
+
+    </div>
+
+    <div class="new-session" id="newSession">+ New Chat Session</div>
+
+    <div class="session-title">Chat Sessions</div>
+    <div class="chat-sessions" id="chatSessions"></div>
+
+    <div class="profile">
+      <div class="profile-avatar">👤</div>
+      <div class="profile-info">
+        <p>Suraj Pawar</p>
+        <small>Quantum Access</small>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Chat -->
+  <div class="main">
+
+
+    <div class="messages-container" id="messagesContainer">
+      <div id="messages"></div>
+    </div>
+
+    <div class="input-area">
+      <textarea id="messageInput" class="message-input"
+        placeholder="Ask Shadow-Ai about nanotech, quantum computing..."></textarea>
+      <button class="send-btn" id="sendBtn">Send</button>
+    </div>
+  </div>
+
+  <script>
+    const sessions = [
+      {
+        id: 1, title: "Quantum Computing Analysis", time: "2 hours ago", messages: [
+          { role: "user", content: "Explain quantum computing principles" },
+          { role: "assistant", content: "Quantum computing leverages quantum mechanical phenomena like superposition and entanglement..." }
+        ]
+      },
+      { id: 2, title: "Nanotechnology Research", time: "1 day ago", messages: [] },
+      { id: 3, title: "Molecular Engineering", time: "3 days ago", messages: [] },
+      { id: 4, title: "Neural Network Optimization", time: "1 week ago", messages: [] }
+    ];
+    let activeSession = 1;
+
+    const chatSessions = document.getElementById("chatSessions");
+    const messagesDiv = document.getElementById("messages");
+
+    function renderSessions() {
+      chatSessions.innerHTML = "";
+      sessions.forEach(s => {
+        const div = document.createElement("div");
+        div.className = "chat-session " + (s.id === activeSession ? "active" : "");
+        div.innerHTML = `<p>${s.title}</p><small>${s.time}</small>`;
+        div.onclick = () => { activeSession = s.id; renderSessions(); renderMessages(); };
+        chatSessions.appendChild(div);
+      });
+    }
+
+    function renderMessages() {
+      messagesDiv.innerHTML = "";
+      const session = sessions.find(s => s.id === activeSession);
+      session.messages.forEach(m => {
+        const div = document.createElement("div");
+        div.className = "message " + m.role;
+        div.innerHTML = `<div class="bubble">${m.content}</div>`;
+        messagesDiv.appendChild(div);
+      });
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    document.getElementById("sendBtn").onclick = () => {
+      const input = document.getElementById("messageInput");
+      const text = input.value.trim();
+      if (!text) return;
+      const session = sessions.find(s => s.id === activeSession);
+      session.messages.push({ role: "user", content: text });
+      renderMessages();
+      input.value = "";
+      setTimeout(() => {
+        session.messages.push({ role: "assistant", content: "Processing quantum data... response generated." });
+        renderMessages();
+      }, 1500);
+    };
+
+    renderSessions();
+    renderMessages();
+  </script>
+</body>
+
+</html>

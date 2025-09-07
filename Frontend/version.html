@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SHADOW AI Versions</title>
+  <link rel="stylesheet" href="static/style.css">
+  <style>
+    /* General Reset */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: "Poppins", sans-serif;
+      background: #0a0a0a;
+      color: white;
+      overflow-x: hidden;
+    }
+
+    /* Section */
+    .versions {
+      padding: 60px 20px;
+      margin-top: 5%;
+      text-align: center;
+    }
+
+    .section-title {
+      font-size: 32px;
+      font-weight: bold;
+      margin-bottom: 40px;
+      color: #b600ff;
+    }
+
+    /* Cards */
+    .cards-container {
+      display: grid;
+      gap: 20px;
+      justify-content: center;
+    }
+
+    .card {
+      background: #151515;
+      border-radius: 16px;
+      padding: 30px 20px;
+      text-align: center;
+      transition: transform 0.4s ease, box-shadow 0.4s ease;
+      opacity: 0;
+      transform: translateY(50px);
+    }
+
+    .card.show {
+      opacity: 1;
+      transform: translateY(0);
+      transition: all 0.6s ease-out;
+    }
+
+    .card:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 30px #bc13fe66;
+    }
+
+    .card-icon {
+      font-size: 40px;
+      margin-bottom: 15px;
+      background: linear-gradient(90deg, #00f0ff, #bc13fe);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .card h2 {
+      margin: 10px 0;
+    }
+
+    .features {
+      text-align: left;
+      margin: 20px 0;
+      list-style: none;
+    }
+
+    .features li {
+      margin-bottom: 8px;
+      position: relative;
+      padding-left: 20px;
+    }
+
+    .features li::before {
+      content: "✔";
+      position: absolute;
+      left: 0;
+      color: #00f0ff;
+    }
+
+    .card .btn {
+      display: inline-block;
+      margin-top: 15px;
+      padding: 10px 20px;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+      color: white;
+      background: linear-gradient(90deg, #00f0ff, #bc13fe);
+      transition: 0.3s;
+    }
+
+    .card .btn:hover {
+      opacity: 0.85;
+    }
+
+    /* Responsive Grid */
+    @media (min-width: 1025px) {
+      .cards-container {
+        grid-template-columns: repeat(3, 1fr);
+        max-width: 1200px;
+        margin: auto;
+      }
+    }
+
+    @media (min-width: 768px) and (max-width: 1024px) {
+      .cards-container {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 767px) {
+      .cards-container {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Navbar -->
+  <nav class="top-navbar">
+    <div class="nav-left">
+      <h1 class="nav-title">SHADOW AI</h1>
+    </div>
+    <div class="nav-center">
+      <a href="/" class="nav-link">Home</a>
+      <a href="/about" class="nav-link">About</a>
+      <a href="/versions" class="nav-link">Version</a>
+      <a href="/admin" class="nav-link">Admin Panel</a>
+      <a href="/chat" class="nav-link">Chat</a>
+      <a href="/login" class="nav-link">Login</a>
+    </div>
+
+    <div class="nav-right">
+      <div class="nav-profile">
+        <div class="status-indicator" id="aiStatus"></div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Versions Section -->
+  <section class="versions">
+    <h1 class="section-title">SHADOW AI Versions</h1>
+    <div class="cards-container">
+      <!-- Card 1 -->
+      <div class="card">
+        <div class="card-icon">🤖</div>
+        <h2>SHADOW AI 1.0</h2>
+        <p>Basic Assistant</p>
+        <ul class="features">
+          <li>Voice Recognition</li>
+          <li>Basic Commands</li>
+          <li>Text Processing</li>
+          <li>Simple Automation</li>
+        </ul>
+        <button class="btn">Download v1.0</button>
+      </div>
+
+      <!-- Card 2 -->
+      <div class="card">
+        <div class="card-icon">📱</div>
+        <h2>SHADOW AI 2.0</h2>
+        <p>Advanced PC + Mobile Control</p>
+        <ul class="features">
+          <li>Advanced AI Processing</li>
+          <li>Cross-Platform Control</li>
+          <li>Gesture Recognition</li>
+          <li>Smart Home Integration</li>
+        </ul>
+        <button class="btn">Download v2.0</button>
+      </div>
+
+      <!-- Card 3 -->
+      <div class="card">
+        <div class="card-icon">🔮</div>
+        <h2>SHADOW AI 3.0</h2>
+        <p>Quantum Intelligence</p>
+        <ul class="features">
+          <li>Quantum Computing</li>
+          <li>Neural Network Learning</li>
+          <li>Predictive Analytics</li>
+          <li>Holographic Interface</li>
+        </ul>
+        <button class="btn">Coming Soon</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- JS for Scroll Animation -->
+  <script>
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("show");
+        }
+      });
+    }, { threshold: 0.2 });
+
+    document.querySelectorAll(".card").forEach((card) => {
+      observer.observe(card);
+    });
+  </script>
+</body>
+
+</html>

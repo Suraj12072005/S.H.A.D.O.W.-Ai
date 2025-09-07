@@ -7,12 +7,9 @@ from dotenv import dotenv_values
 import os
 import mtranslate as mt
 
-# Load environment variables from the .env file.
 env_vars = dotenv_values(".env")
-# Get the input language setting from the environment variables.
-InputLanguage = env_vars.get("InputLanguage")
+InputLanguage = env_vars.get("InputLanguage", "en-US")
 
-# Define the HTML code for the speech recognition interface.
 HtmlCode = '''<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -50,51 +47,52 @@ HtmlCode = '''<!DOCTYPE html>
 </body>
 </html>'''
 
-# Replace the language setting in the HTML code with the input language from the environment variables.
 HtmlCode = str(HtmlCode).replace("recognition.lang = ''", f"recognition.lang = '{InputLanguage}';")
 
-# Write the modified HTML code to a file.
+# Create Data directory if it doesn't exist
+os.makedirs("Data", exist_ok=True)
+
 with open("Data/Voice.html", "w") as f:
     f.write(HtmlCode)
 
-# Get the current working directory.
 current_dir = os.getcwd()
-# Generate the file path for the HTML file.
 Link = f"{current_dir}/Data/Voice.html"
 
-# Set Chrome options for the WebDriver.
 chrome_options = Options()
 user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.142.86 Safari/537.36"
 chrome_options.add_argument(f'user-agent={user_agent}')
 chrome_options.add_argument("--use-fake-ui-for-media-stream")
 chrome_options.add_argument("--use-fake-device-for-media-stream")
-# chrome_options.add_argument("--headless=new")
-# Initialize the Chrome WebDriver using the ChromeDriverManager.
-service = Service(ChromeDriverManager().install())
-driver = webdriver.Chrome(service=service, options=chrome_options)
+chrome_options.add_argument("--headless=new")
 
-# Define the path for temporary files.
-TempDirPath = rf"{current_dir}/Frontend/Files"
+try:
+    service = Service(ChromeDriverManager().install())
+    driver = webdriver.Chrome(service=service, options=chrome_options)
+except Exception as e:
+    print(f"WebDriver initialization error: {e}")
+    driver = None
 
-# Function to set the assistant's status by writing it to a file.
+TempDirPath = f"{current_dir}/static"
+os.makedirs(TempDirPath, exist_ok=True)
+
 def SetAssistantStatus(Status):
-    with open(rf"{TempDirPath}/Status.data", "w", encoding="utf-8") as file:
-        file.write(Status)
+    try:
+        with open(f"{TempDirPath}/Status.data", "w", encoding="utf-8") as file:
+            file.write(Status)
+    except Exception as e:
+        print(f"Error setting status: {e}")
 
-# Function to modify a query to ensure proper punctuation and formatting.
 def QueryModifier(Query):
     new_query = Query.lower().strip()
     query_words = new_query.split()
     question_words = ["how", "what", "who", "where", "when", "why", "which", "whose", "whom","can you", "what's", "where's", "how's", "can you"]
     
-    # Check if the query is a question and add a question mark if necessary.
     if any(word + " " in new_query for word in question_words):
         if query_words[-1][-1] in ['.', '?', '!']:
             new_query = new_query[:-1] + "?"
         else:
             new_query += "?"
     else:
-        # Add a period if the query is not a question.
         if query_words[-1][-1] in ['.', '?', '!']:
             new_query = new_query[:-1] + "."
         else:
@@ -102,41 +100,42 @@ def QueryModifier(Query):
     
     return new_query.capitalize()
 
-# Function to translate text into English using the mtranslate library.
 def UniversalTranslator(Text):
-    english_translation = mt.translate(Text, "en", "auto")
-    return english_translation.capitalize()
+    try:
+        english_translation = mt.translate(Text, "en", "auto")
+        return english_translation.capitalize()
+    except Exception as e:
+        print(f"Translation error: {e}")
+        return Text
 
-# Function to perform speech recognition using the WebDriver.
 def SpeechRecognition():
-    # Open the HTML file in the browser.
-    driver.get("file:///" + Link)
-    # Start speech recognition by clicking the start button.
-    driver.find_element(by=By.ID, value="start").click()
+    if not driver:
+        return "Error: WebDriver not initialized"
+    
+    try:
+        driver.get("file:///" + Link)
+        driver.find_element(by=By.ID, value="start").click()
 
-    while True:
-        try:
-            # Get the recognized text from the HTML output element.
-            Text = driver.find_element(by=By.ID, value="output").text
+        while True:
+            try:
+                Text = driver.find_element(by=By.ID, value="output").text
 
-            if Text:
-                # Stop recognition by clicking the stop button.
-                driver.find_element(by=By.ID, value="end").click()
+                if Text:
+                    driver.find_element(by=By.ID, value="end").click()
 
-                # If the input language is English, return the modified query.
-                if InputLanguage.lower() == "en" or "en" in InputLanguage.lower():
-                    return QueryModifier(Text)
-                else:
-                    # If the input language is not English, translate the text and return it.
-                    SetAssistantStatus("Translating ...")
-                    return QueryModifier(UniversalTranslator(Text))
+                    if InputLanguage.lower() == "en" or "en" in InputLanguage.lower():
+                        return QueryModifier(Text)
+                    else:
+                        SetAssistantStatus("Translating ...")
+                        return QueryModifier(UniversalTranslator(Text))
 
-        except Exception as e:
-            pass
+            except Exception as e:
+                continue
 
-# Main execution block.
+    except Exception as e:
+        return f"Speech recognition error: {e}"
+
 if __name__ == "__main__":
     while True:
-        # Continuously perform speech recognition and print the recognized text.
         Text = SpeechRecognition()
         print(Text)

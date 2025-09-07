@@ -3,35 +3,48 @@ from groq import Groq
 from json import load, dump
 import datetime
 from dotenv import dotenv_values
+import os
+
+# Create Data directory if it doesn't exist
+os.makedirs("Data", exist_ok=True)
 
 env_vars = dotenv_values(".env")
 
-Username = env_vars.get("Username")
-Assistantname = env_vars.get("Assistantname")
+Username = env_vars.get("Username", "User")
+Assistantname = env_vars.get("Assistantname", "SHADOW")
 GroqAPIKey = env_vars.get("GroqAPIKey")
 
-client = Groq(api_key=GroqAPIKey)
+if not GroqAPIKey:
+    print("Warning: GroqAPIKey not found in environment variables")
+    client = None
+else:
+    client = Groq(api_key=GroqAPIKey)
 
 System = f"""Hello, I am {Username}, You are a very accurate and advanced AI chatbot named {Assistantname} which has real-time up-to-date information from the internet.
 *** Provide Answers In a Professional Way, make sure to add full stops, commas, question marks, and use proper grammar.***
 *** Just answer the question from the provided data in a professional way. ***"""
 
-try:
-    with open(r"Data\ChatLog.json", "r") as f:
-        messages = load(f)
-except:
-    with open(r"Data\ChatLog.json", "w") as f:
-        dump([], f)
+def load_chat_log():
+    try:
+        with open("Data/ChatLog.json", "r") as f:
+            return load(f)
+    except:
+        with open("Data/ChatLog.json", "w") as f:
+            dump([], f)
+        return []
 
 def GoogleSearch(query):
-    results = list(search(query, advanced=True, num_results=5))
-    Answer = f"The search results for '{query}' are :\n[start]\n"
+    try:
+        results = list(search(query, advanced=True, num_results=5))
+        Answer = f"The search results for '{query}' are :\n[start]\n"
 
-    for i in results:
-        Answer += f"Title: {i.title}\nDescription: {i.description}\n\n"
+        for i in results:
+            Answer += f"Title: {i.title}\nDescription: {i.description}\n\n"
 
-    Answer += "[end]"
-    return Answer
+        Answer += "[end]"
+        return Answer
+    except Exception as e:
+        return f"Search error: {str(e)}"
 
 def AnswerModifier(Answer):
     lines = Answer.split('\n')
@@ -64,38 +77,43 @@ def Information():
     return data
 
 def RealtimeSearchEngine(prompt):
-    global SystemChatBot, messages
+    if not client:
+        return "Error: Groq API key not configured"
+    
+    try:
+        messages = load_chat_log()
+        messages.append({"role": "user", "content": f"{prompt}"})
 
-    with open(r"Data\ChatLog.json", "r") as f:
-        messages = load(f)
-    messages.append({"role": "user", "content": f"{prompt}"})
+        search_results = GoogleSearch(prompt)
+        SystemChatBot.append({"role": "system", "content": search_results})
 
-    SystemChatBot.append({"role": "system", "content": GoogleSearch(prompt)})
+        completion = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=SystemChatBot + [{"role": "system", "content": Information()}] + messages,
+            max_tokens=2048,
+            temperature=0.7,
+            top_p=1,
+            stream=True,
+            stop=None
+        )
 
-    completion = client.chat.completions.create(
-        model="llama3-70b-8192",
-        messages=SystemChatBot + [{"role": "system", "content": Information()}] + messages,
-        max_tokens=2048,
-        temperature=0.7,
-        top_p=1,
-        stream=True,
-        stop=None
-    )
+        Answer = ""
 
-    Answer = ""
+        for chunk in completion:
+            if chunk.choices[0].delta.content:
+                Answer += chunk.choices[0].delta.content
 
-    for chunk in completion:
-        if chunk.choices[0].delta.content:
-            Answer += chunk.choices[0].delta.content
+        Answer = Answer.strip().replace("</s>", "")
+        messages.append({"role": "assistant", "content": Answer})
 
-    Answer = Answer.strip().replace("</s>", "")
-    messages.append({"role": "assistant", "content": Answer})
+        with open("Data/ChatLog.json", "w") as f:
+            dump(messages, f, indent=4)
 
-    with open(r"Data\ChatLog.json", "w") as f:
-        dump(messages, f, indent=4)
-
-    SystemChatBot.pop()
-    return AnswerModifier(Answer=Answer)
+        SystemChatBot.pop()
+        return AnswerModifier(Answer=Answer)
+    
+    except Exception as e:
+        return f"Error: {str(e)}"
 
 if __name__ == "__main__":
     while True:

@@ -1,0 +1,129 @@
+S.H.A.D.O.W.-Ai/
+├── app.py                            # Main Flask application file
+├── .env                              # Environment variables file (optional)
+├── requirements.txt                  # Python dependencies (optional)
+├──render.yaml
+
+├── Backend/                          # Your backend Python modules
+│   ├── __init__.py                   
+│   ├── Automation.py
+│   ├── Chatbot.py
+│   ├── ImageGeneration.py
+│   ├── Model.py
+│   ├── RealtimeSearchEngine.py
+│   ├── ScreenAwareness.py
+│   ├── SpeechToText.py
+│   └── WhatsAppFeatures.py
+
+
+├── Frontend/                          
+│   ├──index.html                 
+│   ├──static/                          
+│        ├── style.css/
+│        ├── script.js
+│        ├── shadow.gif
+
+
+├── Data/                             
+│   ├──Files/.......   
+       NotepadFiles/   
+│   ├── mantri_mahoday_bhet_patra_in_marathi_langguage_20250806_160426.txt 
+│   ├── login_page_20250805_190456.txt 
+│   ├── login_page_20250805_190456.txt 
+│  
+│   ├──ChatLog.txt
+│   ├──Voice.html
+
+
+
+Frontend/                          
+│   ├──index.html 
+│   ├──login.html                 
+
+│   ├──static/                          
+│        ├── style.css
+│        ├── script.js
+│        ├── login.js
+│        ├── login.css
+
+│        ├── shadow.gif
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+S.H.A.D.O.W.-Ai/
+│
+├── app.py                  # Main Flask/FastAPI entry point
+├── requirements.txt        # Python dependencies
+├── .env                    # Environment variables (API keys, DB URIs, secrets)
+├── render.yaml             # Deployment config (if using Render/Heroku)
+│
+├── Backend/                # All backend modules
+│   ├──
+│   ├── core/               # Core AI + logic
+│   │   ├── Chatbot.py
+│   │   ├── Model.py
+│   │   ├── RealtimeSearchEngine.py
+│   │   ├── TextToSpeech.py
+│   │   ├──SpeechToText.py
+│   │   ├── Automation.py
+│   │   ├── WhatsAppFeatures.py
+│   │   └── ImageGeneration.py
+
+│   ├── utils/              # Helper utilities
+│   │   ├── db.py           # SQL + MongoDB connection
+│   │   ├── logger.py       # Logging system
+│   │   └── config.py       # Config loader
+│   │
+│   └── api/                # API routes
+│       ├── auth.py         # Login/Signup + Admin 2FA
+│       ├── dashboard.py    # User dashboard APIs
+│       ├── admin.py        # Admin panel APIs
+│       └── notifications.py
+│
+├── Frontend/               # All frontend files
+│   ├── index.html          # User dashboard (home)
+│   ├── login.html          # Login/Signup page
+│   ├── admin.html          # Admin panel page
+│   ├── static/             # Static assets
+│   │   ├── css/
+│   │   │   ├── style.css
+│   │   │   └── login.css
+│   │   ├── js/
+│   │   │   ├── script.js
+│   │   │   └── login.js
+│   │   ├── images/
+│   │   │   └── shadow.gif
+│
+├── Data/                   # User data & logs
+│   ├── Files/
+│   │   └── NotepadFiles/   # Text/code files created by Shadow
+│   ├── ChatLog.txt         # Conversation history
+│   ├── Voice.html          # Voice recognition test page
+│   └── reminders.json      # Saved tasks/reminders
+│
+└── Tests/                  # Unit tests
+    ├── test_auth.py
+    ├── test_dashboard.py
+    ├── test_admin.py
+    └── test_shadow.py

@@ -1,277 +1,214 @@
-from flask import Flask, render_template
-
-app = Flask(__name__, 
-            template_folder='Frontend/templates', 
-            static_folder='Frontend/static')
-
-@app.route('/')
-def home():
-    return render_template('index.html')
-
-if __name__ == '__main__':
-    app.run(debug=True, port=8000)
-
-
-
-from Frontend.GUI import (
-    GraphicalUserInterface,
-    SetAssistantStatus,
-    ShowTextToScreen,
-    TempDirectoryPath,
-    SetMicrophoneStatus,
-    AnswerModifier,
-    QueryModifier,
-    GetMicrophoneStatus,
-    GetAssistantStatus)
-from Backend.Model import FirstLayerDMM
-from Backend.RealtimeSearchEngine import RealtimeSearchEngine
-from Backend.Automation import Automation
-from Backend.SpeechToText import SpeechRecognition
-from Backend.Chatbot import ChatBot
-from Backend.TextToSpeech import TextToSpeech
-from dotenv import dotenv_values
+import sys
 import os
+import json
+import psutil
+import datetime
+import asyncio
+import threading
+import time
+from flask import Flask, render_template, request, jsonify, send_from_directory
+from flask_cors import CORS
+from werkzeug.serving import make_server
+from dotenv import load_dotenv
+from bs4 import BeautifulSoup
+# from Backend.RealtimeSearchEngine import RealtimeSearchEngine
 
-# Load environment variables
-env_vars = dotenv_values(".env")
-Username = env_vars.get("Username", "User")
-Assistantname = env_vars.get("Assistantname", "S.H.A.D.O.W.")
+import requests
 
-# Default welcome message
-DefaultMessage = f'''{Username} : Hello {Assistantname}, How are you?
-{Assistantname} : Welcome {Username}. I am doing well. How may I help you?'''
+# ✅ Debug info
+print("\U0001F4C2 Current working directory:", os.getcwd())
+print("\U0001F4C1 backend folder exists?:", os.path.exists('Backend'))
+print("\U0001F4C4 Files in backend:", os.listdir('Backend') if os.path.exists('Backend') else "backend not found")
 
-# List to store subprocesses
-Subprocesses = []
+# ✅ Import backend modules
+from Backend.RealtimeSearchEngine import RealtimeSearchEngine
+from Backend.Chatbot import ChatBot
+from Backend.Model import FirstLayerDMM
+from Backend.Automation import Automation
 
-# List of automation functions
-Functions = ["open", "close", "play", "system", "content", "google search", "youtube search"]
+# ✅ Load environment variables
+load_dotenv()
 
-def ShowDefaultChatIfNoChats():
-    """Show default chat if no previous chats exist"""
-    try:
-        os.makedirs("Data", exist_ok=True)
-        
-        # Check if ChatLog.json exists and has content
-        if not os.path.exists('Data/ChatLog.json'):
-            with open('Data/ChatLog.json', 'w', encoding='utf-8') as file:
-                json.dump([], file)
-        
-        with open('Data/ChatLog.json', "r", encoding='utf-8') as file:
-            content = file.read().strip()
-            
-        if len(content) < 5:
-            # Create Frontend/Files directory if it doesn't exist
-            os.makedirs("Frontend/Files", exist_ok=True)
-            
-            with open(TempDirectoryPath('Database.data'), 'w', encoding='utf-8') as file:
-                file.write("")
+# ✅ Create Flask app
+app = Flask(__name__, template_folder="Frontend", static_folder="Frontend/static")
+CORS(app)
 
-            with open(TempDirectoryPath('Responses.data'), 'w', encoding='utf-8') as file:
-                file.write(DefaultMessage)
-    except Exception as e:
-        print(f"Error in ShowDefaultChatIfNoChats: {e}")
+# ✅ Real-time system data
+system_data = {
+    'cpu': 0,
+    'memory': {'used': 0, 'total': 0, 'percent': 0},
+    'storage': {'used': 0, 'total': 0, 'percent': 0},
+    'battery': {'charging': None, 'percent': 0},
+    'network': {'ip': '192.168.1.4', 'bandwidth': '7.1 Mbps / 59.5 Mbps', 'connection': 'SHADOW_NET_5G - 89%'}
+}
 
-def ReadChatlogJson():
-    """Read and return chatlog data from JSON file"""
-    try:
-        with open(r'Data/ChatLog.json', 'r', encoding='utf-8') as file:
-            chatlog_data = json.load(file)
-        return chatlog_data
-    except Exception as e:
-        print(f"Error reading ChatLog.json: {e}")
-        return []
-
-def ChatlogIntegration():
-    """Integrate chatlog data for GUI display"""
-    try:
-        json_data = ReadChatlogJson()
-        formatted_chatlog = ""
-        
-        for entry in json_data:
-            if entry["role"] == "user":
-                formatted_chatlog += f"{Username}: {entry['content']}\n"
-            elif entry["role"] == "assistant":
-                formatted_chatlog += f"{Assistantname}: {entry['content']}\n"
-        
-        # Replace placeholders
-        formatted_chatlog = formatted_chatlog.replace("{Username}", Username)
-        formatted_chatlog = formatted_chatlog.replace("{Assistantname}", Assistantname)
-        
-        with open(TempDirectoryPath('Database.data'), 'w', encoding='utf-8') as file:
-            file.write(AnswerModifier(formatted_chatlog))
-    except Exception as e:
-        print(f"Error in ChatlogIntegration: {e}")
-
-def ShowChatsOnGUI():
-    """Display chats on the GUI"""
-    try:
-        with open(TempDirectoryPath('Database.data'), "r", encoding='utf-8') as file:
-            data = file.read()
-        
-        if len(str(data)) > 0:
-            lines = data.split('\n')
-            result = '\n'.join(lines)
-            
-            with open(TempDirectoryPath('Responses.data'), "w", encoding='utf-8') as file:
-                file.write(result)
-    except Exception as e:
-        print(f"Error in ShowChatsOnGUI: {e}")
-
-def InitialExecution():
-    """Initialize the application"""
-    try:
-        SetMicrophoneStatus("False")
-        ShowTextToScreen("")
-        ShowDefaultChatIfNoChats()
-        ChatlogIntegration()
-        ShowChatsOnGUI()
-        print("✅ S.H.A.D.O.W.-AI initialized successfully!")
-    except Exception as e:
-        print(f"❌ Error in InitialExecution: {e}")
-
-# Initialize the application
-InitialExecution()
-
-def MainExecution():
-    """Main execution function for processing user queries"""
-    try:
-        TaskExecution = False
-        ImageExecution = False
-        ImageGenerationQuery = ""
-
-        # Get user input through speech recognition
-        SetAssistantStatus("Listening ...")
-        Query = SpeechRecognition()
-        ShowTextToScreen(f"{Username} : {Query}")
-        
-        # Process the query through the decision model
-        SetAssistantStatus("Thinking ...")
-        Decision = FirstLayerDMM(Query)
-
-        print(f"\n🧠 Decision : {Decision}\n")
-
-        # Check for general and realtime queries
-        G = any([i for i in Decision if i.startswith("general")])
-        R = any([i for i in Decision if i.startswith("realtime")])
-
-        # Merge general and realtime queries
-        merged_queries = [i.split(" ", 1)[1] if " " in i else i for i in Decision if i.startswith('general') or i.startswith('realtime')]
-        Merged_query = " and ".join(merged_queries)
-
-        # Check for image generation requests
-        for queries in Decision:
-            if "generate" in queries:
-                ImageGenerationQuery = str(queries)
-                ImageExecution = True
-
-        # Execute automation tasks
-        for queries in Decision:
-            if TaskExecution == False:
-                if any(queries.startswith(func) for func in Functions):
-                    run(Automation(list(Decision)))
-                    TaskExecution = True
-
-        # Handle image generation
-        if ImageExecution == True:
-            try:
-                os.makedirs("Frontend/Files", exist_ok=True)
-                with open(r"Frontend/Files/ImageGeneration.data", "w") as file:
-                    file.write(f"{ImageGenerationQuery},True")
-
-                p1 = subprocess.Popen(['python', r'Backend/ImageGeneration.py'],
-                                     stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                     stdin=subprocess.PIPE, shell=False)
-                Subprocesses.append(p1)
-            except Exception as e:
-                print(f"❌ Error starting ImageGeneration.py: {e}")
-
-        # Handle realtime queries
-        if (G and R) or R:
-            SetAssistantStatus("Searching ...")
-            Answer = RealtimeSearchEngine(QueryModifier(Merged_query))
-            ShowTextToScreen(f"{Assistantname} : {Answer}")
-            SetAssistantStatus("Answering ...")
-            TextToSpeech(Answer)
-            return True
-
-        # Handle individual queries
-        else:
-            for Queries in Decision:
-                if "general" in Queries:
-                    SetAssistantStatus("Thinking ...")
-                    QueryFinal = Queries.replace("general", "").strip()
-                    Answer = ChatBot(QueryModifier(QueryFinal))
-                    ShowTextToScreen(f"{Assistantname} : {Answer}")
-                    SetAssistantStatus("Answering ...")
-                    TextToSpeech(Answer)
-                    return True
-
-                elif "realtime" in Queries:
-                    SetAssistantStatus("Searching ...")
-                    QueryFinal = Queries.replace("realtime", "").strip()
-                    Answer = RealtimeSearchEngine(QueryModifier(QueryFinal))
-                    ShowTextToScreen(f"{Assistantname} : {Answer}")
-                    SetAssistantStatus("Answering ...")
-                    TextToSpeech(Answer)
-                    return True
-
-                elif "exit" in Queries:
-                    QueryFinal = "Okay, Bye!"
-                    Answer = ChatBot(QueryModifier(QueryFinal))
-                    ShowTextToScreen(f"{Assistantname} : {Answer}")
-                    SetAssistantStatus("Answering ...")
-                    TextToSpeech(Answer)
-                    SetAssistantStatus("Shutting down ...")
-                    os._exit(1)
-    
-    except Exception as e:
-        print(f"❌ Error in MainExecution: {e}")
-        SetAssistantStatus("Error occurred")
-
-def FirstThread():
-    """Main thread for handling user interactions"""
+def update_system_data():
     while True:
         try:
-            CurrentStatus = GetMicrophoneStatus()
-
-            if CurrentStatus == "True":
-                MainExecution()
+            system_data['cpu'] = round(psutil.cpu_percent(interval=1), 1)
+            memory = psutil.virtual_memory()
+            system_data['memory'] = {
+                'used': round(memory.used / (1024**3), 1),
+                'total': round(memory.total / (1024**3), 1),
+                'percent': round(memory.percent, 1)
+            }
+            disk = psutil.disk_usage('/')
+            system_data['storage'] = {
+                'used': round(disk.used / (1024**3), 1),
+                'total': round(disk.total / (1024**3), 1),
+                'percent': round((disk.used / disk.total) * 100, 1)
+            }
+            battery = psutil.sensors_battery()
+            if battery:
+                system_data['battery'] = {
+                    'charging': battery.power_plugged,
+                    'percent': round(battery.percent, 1)
+                }
             else:
-                AIStatus = GetAssistantStatus()
-
-                if "Available..." in AIStatus:
-                    sleep(0.1)
-                else:
-                    SetAssistantStatus("Available ...")
+                system_data['battery'] = {'charging': True, 'percent': 100}
         except Exception as e:
-            print(f"❌ Error in FirstThread: {e}")
-            sleep(1)
+            print(f"Error updating system data: {e}")
+        time.sleep(2)
 
-def SecondThread():
-    """Second thread for GUI"""
+# ✅ Start monitoring thread
+threading.Thread(target=update_system_data, daemon=True).start()
+
+# ✅ Routes
+@app.route('/')
+def index():
+    return render_template("index.html")
+@app.route('/about')
+
+def about():
+    return render_template("about.html")
+
+@app.route('/versions')
+def versions():
+    return render_template("version.html")
+
+@app.route('/admin')
+def admin():
+    return render_template("admin.html")
+
+@app.route('/chat')
+def chat():
+    return render_template("chat.html")
+
+@app.route('/login')
+def login():
+    return render_template("login.html")
+
+@app.route('/static/<path:filename>')
+def static_files(filename):
+    return send_from_directory('Frontend/static', filename)
+
+@app.route('/system-data')
+def get_system_data():
+    return jsonify(system_data)
+
+@app.route('/api/chat', methods=['POST'])
+def chat_endpoint():
     try:
-        GraphicalUserInterface()
-    except Exception as e:
-        print(f"❌ Error in SecondThread: {e}")
+        data = request.get_json()
+        user_message = data.get('message', '')
+        if not user_message:
+            return jsonify({'error': 'No message provided'}), 400
 
+        decision = FirstLayerDMM(user_message)
+        response = ""
+        for task in decision:
+            if task.startswith('general'):
+                response = ChatBot(task.replace('general', '').strip())
+            elif task.startswith('realtime'):
+                response = RealtimeSearchEngine(task.replace('realtime', '').strip())
+            elif any(task.startswith(prefix) for prefix in ['open', 'close', 'play', 'content', 'google search', 'youtube search', 'system']):
+                asyncio.run(Automation([task]))
+                response = f"Executing: {task}"
+            else:
+                response = ChatBot(user_message)
+
+        return jsonify({
+            'response': response,
+            'decision': decision,
+            'timestamp': datetime.datetime.now().isoformat()
+        })
+    except Exception as e:
+        print(f"Chat error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/voice-recognition', methods=['POST'])
+def voice_recognition():
+    try:
+        return jsonify({'status': 'listening', 'message': 'Voice recognition started'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/automation', methods=['POST'])
+def automation_endpoint():
+    try:
+        data = request.get_json()
+        commands = data.get('commands', [])
+        if not commands:
+            return jsonify({'error': 'No commands provided'}), 400
+        result = asyncio.run(Automation(commands))
+        return jsonify({'status': 'success', 'result': result, 'commands_executed': commands})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/weather')
+def get_weather():
+    try:
+        api_key = os.getenv("WEATHER_API_KEY")  # .env me rakho
+        city = "Yeola"
+
+        url = f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={api_key}&units=metric"
+        response = requests.get(url)
+        data = response.json()
+
+        if data.get("cod") != 200:
+            return jsonify({'error': data.get("message", "Weather data not available")}), 400
+
+        # Extract data
+        temperature = f"{data['main']['temp']}°C"
+        condition = data['weather'][0]['description'].upper()
+        humidity = f"{data['main']['humidity']}%"
+        wind = f"{data['wind']['speed']} km/h"
+
+        return jsonify({
+            'city': city.upper() + " CITY",
+            'temperature': temperature,
+            'condition': condition,
+            'humidity': humidity,
+            'wind': wind
+        })
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    
+    
+@app.route('/api/network-info')
+def get_network_info():
+    try:
+        return jsonify(system_data['network'])
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# ✅ Start the server
 if __name__ == "__main__":
-    try:
-        print("🚀 Starting S.H.A.D.O.W.-AI...")
-        
-        # Start the main thread
-        thread1 = threading.Thread(target=FirstThread, daemon=True)
-        thread1.start()
-        
-        # Start the GUI thread
-        thread2 = threading.Thread(target=SecondThread, daemon=True)
-        thread2.start()
-        
-        # Keep the main thread alive
-        while True:
-            sleep(1)
-            
-    except KeyboardInterrupt:
-        print("\n⏹️ S.H.A.D.O.W.-AI stopped by user")
-    except Exception as e:
-        print(f"❌ Fatal error in main: {e}")
+    # Create required folders
+    os.makedirs('Data', exist_ok=True)
+    os.makedirs('Backend', exist_ok=True)
+    os.makedirs('Frontend', exist_ok=True)
+    os.makedirs('Frontend/static', exist_ok=True)
+
+    print("\U0001F680 SHADOW AI Server Starting...")
+    print("\U0001F4CA System monitoring active")
+    print("\U0001F916 AI modules loaded")
+    print("✨ Server running on http://localhost:5000")
+
+    app.run(debug=True, host='0.0.0.0', port=5000, use_reloader=False)
+    
+    
+    
+    
+    

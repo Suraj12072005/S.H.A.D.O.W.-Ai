@@ -1,5 +1,9 @@
+# ============================================================== 
+#                          Automation.py (Final Updated)
+# ==============================================================
+
+import asyncio
 from AppOpener import close, open as appopen
-from webbrowser import open as webopen
 from pywhatkit import search, playonyt
 from dotenv import dotenv_values
 from bs4 import BeautifulSoup
@@ -9,43 +13,46 @@ import webbrowser
 import subprocess
 import requests
 import keyboard
-import asyncio
 import os
+import psutil
+import platform
+from ctypes import cast, POINTER
+from comtypes import CLSCTX_ALL
+from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
 
+# ================== ENV / API KEY ================== #
 env_vars = dotenv_values(".env")
 GroqAPIKey = env_vars.get("GroqAPIKey")
+client = Groq(api_key=GroqAPIKey) if GroqAPIKey else None
 
-classes = ["zCubwf", "hgKELc", "LTKOO SY7ric", "ZOLcW", "gsrt vk_bk FzvWSb YwPhnf", "pclqee", "tw-Data-text tw-text-small tw-ta",
-           "IZ6rdc", "05uR6d LTKOO", "vlzY6d", "webanswers-webanswers_table_webanswers-table", "dDoNo ikb4Bb gsrt", "sXLa0e", 
-           "LWkfKe", "VQF4g", "qv3Wpe", "kno-rdesc", "SPZz6b"]
-
-useragent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.75 Safari/537.36'
-
-# Initialize Groq client only if API key exists
-client = None
-if GroqAPIKey:
-    client = Groq(api_key=GroqAPIKey)
-
-professional_responses = [
-    "Your satisfaction is my top priority; feel free to reach out if there's anything else I can help you with.",
-    "I'm at your service for any additional questions or support you may need—don't hesitate to ask.",
+# ================== GLOBALS ================== #
+messages = []
+SystemChatBot = [
+    {"role": "system",
+     "content": "You are an AI content writer. Write content like letters, codes, applications, essays, notes, poems, etc."}
 ]
 
-messages = []
+# ================== WEB APPS MAPPING ================== #
+WEB_APPS = {
+    "whatsapp": "https://web.whatsapp.com",
+    # "instagram": "https://www.instagram.com",
+    # "facebook": "https://www.facebook.com",
+    # "github": "https://github.com",
+    # "twitter": "https://twitter.com",
+    "linkedin": "https://www.linkedin.com",
+    "youtube": "https://www.youtube.com",
+}
 
-SystemChatBot = [{"role": "system", "content": f"Hello, I am {os.environ.get('Username', 'User')}, a content writer. You have to write content like letters, codes, applications, essays, notes, songs, poems, etc."}]
-
-
+# ================== GOOGLE SEARCH ================== #
 def GoogleSearch(topic):
     search(topic)
     return True
 
-
+# ================== CONTENT WRITER ================== #
 def Content(topic):
     def OpenNotepad(file):
         try:
-            default_text_editor = 'notepad.exe'
-            subprocess.Popen([default_text_editor, file])
+            subprocess.Popen(["notepad.exe", file])
             return True
         except Exception as e:
             print(f"Error opening notepad: {e}")
@@ -53,63 +60,47 @@ def Content(topic):
 
     def ContentWriterAI(prompt):
         if not client:
-            print("Error: Groq API key not found. Please check your .env file.")
-            return "Error: Unable to generate content - API key missing."
-        
+            return "Error: API key missing."
+
         try:
             messages.append({"role": "user", "content": f"{prompt}"})
-
             completion = client.chat.completions.create(
                 model="llama-3.3-70b-versatile",
                 messages=SystemChatBot + messages,
                 max_tokens=2048,
                 temperature=0.7,
-                top_p=1,
-                stream=True,
-                stop=None
+                stream=True
             )
-
             answer = ""
-
             for chunk in completion:
                 if chunk.choices[0].delta.content:
                     answer += chunk.choices[0].delta.content
-
             answer = answer.replace("</s>", "")
             messages.append({"role": "assistant", "content": answer})
             return answer
         except Exception as e:
-            print(f"Error generating content: {e}")
-            return f"Error: Unable to generate content - {str(e)}"
+            return f"Error generating content: {e}"
 
     topic = topic.replace("content", "").strip()
     content_by_ai = ContentWriterAI(topic)
 
-    # Create Data directory if it doesn't exist
     data_dir = "Data"
-    if not os.path.exists(data_dir):
-        os.makedirs(data_dir)
-        print(f"Created directory: {data_dir}")
-
+    os.makedirs(data_dir, exist_ok=True)
     filepath = os.path.join(data_dir, f"{topic.lower().replace(' ', '_')}.txt")
-    
+
     try:
         with open(filepath, "w", encoding="utf-8") as file:
             file.write(content_by_ai)
-        print(f"Content written to: {filepath}")
-        
         OpenNotepad(filepath)
         return True
     except Exception as e:
-        print(f"Error writing content to file: {e}")
+        print(f"Error writing file: {e}")
         return False
 
-# Content("write A application for sick leave")
+# ================== YOUTUBE ================== #
 def YouTubeSearch(topic):
-    url = f"https://www.youtube.com/results?search_query={topic}"
-    webbrowser.open(url)
+    webbrowser.open(f"https://www.youtube.com/results?search_query={topic}")
     return True
-
 
 def PlayYoutube(query):
     try:
@@ -119,204 +110,136 @@ def PlayYoutube(query):
         print(f"Error playing YouTube video: {e}")
         return False
 
-
-# Assuming `AppOpener` and `webopen` are defined or imported
-import webbrowser
-import requests
-from bs4 import BeautifulSoup
-import subprocess
-import os
-import platform
-
-import webbrowser
-import requests
-from bs4 import BeautifulSoup
-import subprocess
-import os
-import platform
+# ================== OPEN APP / WEB ================== #
+def OpenWeb(url: str):
+    if not url.startswith("http"):
+        url = "https://" + url
+    try:
+        webbrowser.open(url)
+        print(f"Opened website: {url}")
+        return True
+    except Exception as e:
+        print(f"Error opening website {url}: {e}")
+        return False
 
 def OpenApp(app, sess=requests.session()):
-    
-    try:
-        # Try to open the app using AppOpener
-        appopen(app, match_closest=True, output=True, throw_error=True)
-        return True
+    app = app.lower().strip()
 
-    except:
-        def extract_links(html):
-            if html is None:
-                return []
-            soup = BeautifulSoup(html, 'html.parser')
-            # Find all anchors with valid href attributes
-            links = soup.find_all('a', href=True)
-            return [link.get('href') for link in links]
-            
-        def search_google(query):
-            url = f"https://www.microsoft.com/en-us/search?q={query}"
-            headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"}
-            response = sess.get(url, headers=headers)
-            if response.status_code == 200:
-                return response.text
+    # ===== Case 1: "open <app>" =====
+    if not app.endswith(" app"):
+        try:
+            appopen(app, match_closest=True, output=True, throw_error=True)
+            print(f"Opening {app} app.")
+            return True
+        except:
+            if app in WEB_APPS:
+                print(f"{app.capitalize()} app not found. Opening {app} Web...")
+                webbrowser.open(WEB_APPS[app])
             else:
-                print("Failed to retrieve search results.")
-                return None
+                print(f"{app.capitalize()} app not found. Opening Web fallback...")
+                webbrowser.open(f"https://{app}.com")
+            return True
 
-        def open_in_chrome_beta(url):
-            """Open URL specifically in Google Chrome Beta"""
-            system = platform.system()
-            
-            try:
-                if system == "Windows":
-                    # Common Chrome Beta paths on Windows
-                    chrome_beta_paths = [
-                        r"C:\Program Files\Google\Chrome Beta\Application\chrome.exe",
-                        r"C:\Program Files (x86)\Google\Chrome Beta\Application\chrome.exe",
-                        os.path.expanduser(r"~\AppData\Local\Google\Chrome Beta\Application\chrome.exe")
-                    ]
-                    
-                    for path in chrome_beta_paths:
-                        if os.path.exists(path):
-                            subprocess.run([path, url])
-                            return True
-                    
-                    # Fallback to regular Chrome if Beta not found
-                    chrome_stable_paths = [
-                        r"C:\Program Files\Google\Chrome\Application\chrome.exe",
-                        r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
-                        os.path.expanduser(r"~\AppData\Local\Google\Chrome\Application\chrome.exe")
-                    ]
-                    
-                    for path in chrome_stable_paths:
-                        if os.path.exists(path):
-                            print("Chrome Beta not found, using stable Chrome")
-                            subprocess.run([path, url])
-                            return True
-                
-                elif system == "Darwin":  # macOS
-                    # Try Chrome Beta first
-                    try:
-                        subprocess.run(["open", "-a", "Google Chrome Beta", url])
-                        return True
-                    except:
-                        print("Chrome Beta not found, trying stable Chrome")
-                        subprocess.run(["open", "-a", "Google Chrome", url])
-                        return True
-                
-                elif system == "Linux":
-                    # Try Chrome Beta first
-                    try:
-                        subprocess.run(["google-chrome-beta", url])
-                        return True
-                    except:
-                        print("Chrome Beta not found, trying stable Chrome")
-                        subprocess.run(["google-chrome", url])
-                        return True
-                
-                # Final fallback to default browser
-                print("Chrome Beta and stable Chrome not found, opening in default browser")
-                webbrowser.open(url)
-                return True
-                
-            except Exception as e:
-                print(f"Error opening Chrome Beta: {e}")
-                # Final fallback
-                webbrowser.open(url)
-                return True
+    # ===== Case 2: "open <app> app" =====
+    else:
+        base_app = app.replace(" app", "").strip()
+        try:
+            appopen(base_app, match_closest=True, output=True, throw_error=True)
+            print(f"Opening {base_app} app.")
+            return True
+        except:
+            print(f"{base_app.capitalize()} app not found. Opening Play Store page...")
+            webbrowser.open(f"https://play.google.com/store/search?q={base_app}")
+            return True
 
-        # Attempt a search for the app
-        html = search_google(app)
-        if html:
-            links = extract_links(html)
-            if links:
-                link = links[0]
-                open_in_chrome_beta(link)
-        return True
-# OpenApp("instagram")
 def CloseApp(app):
     if "chrome" in app.lower():
         try:
             subprocess.run(["taskkill", "/f", "/im", "chrome.exe"], check=True)
-            print(f"Closed Chrome using taskkill")
             return True
         except:
             pass
-    
     try:
         close(app, match_closest=True, output=True, throw_error=True)
-        print(f"Closed {app} using AppOpener")
         return True
     except Exception as e:
         print(f"Error closing {app}: {e}")
         return False
 
-
+# ================== SYSTEM COMMANDS ================== #
 def System(command):
-    def mute():
-        keyboard.press_and_release("volume mute")
-
-    def unmute():
-        keyboard.press_and_release("volume mute")
-
-    def volume_up():
-        keyboard.press_and_release("volume up")
-
-    def volume_down():
-        keyboard.press_and_release("volume down")
-
     try:
-        if command == "mute":
-            mute()
-        elif command == "unmute":
-            unmute()
-        elif command == "volume up":
-            volume_up()
-        elif command == "volume down":
-            volume_down()
+        if "volume" in command:
+            if "%" in command:
+                percent = int(command.replace("volume", "").replace("%", "").strip())
+                percent = max(0, min(100, percent))
+                devices = AudioUtilities.GetSpeakers()
+                interface = devices.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
+                volume = cast(interface, POINTER(IAudioEndpointVolume))
+                volume.SetMasterVolumeLevelScalar(percent/100, None)
+                print(f"Volume set to {percent}%")
+                return True
+            elif "mute" in command:
+                keyboard.press_and_release("volume mute")
+            elif "up" in command:
+                keyboard.press_and_release("volume up")
+            elif "down" in command:
+                keyboard.press_and_release("volume down")
+
+        elif "brightness" in command:
+            percent = int(command.replace("brightness", "").replace("%", "").strip())
+            percent = max(0, min(100, percent))
+            os.system(f"powershell (Get-WmiObject -Namespace root/WMI -Class WmiMonitorBrightnessMethods).WmiSetBrightness(1,{percent})")
+            print(f"Brightness set to {percent}%")
+            return True
+
+        elif "keyboard light on" in command or "keyboard light off" in command:
+            try:
+                keyboard.press_and_release("f10")
+                print("Toggled keyboard light (requires FN lock).")
+                return True
+            except Exception as e:
+                print(f"Cannot toggle keyboard light: {e}")
+                return False
+
+        elif "battery" in command:
+            battery = psutil.sensors_battery()
+            if battery:
+                percent = battery.percent
+                print(f"Battery level: {percent}%")
+                return percent
+            else:
+                print("Battery info not available")
+                return False
+
         else:
             print(f"Unknown system command: {command}")
             return False
-        
-        print(f"Executed system command: {command}")
+
         return True
     except Exception as e:
         print(f"Error executing system command {command}: {e}")
         return False
 
-
+# ================== AUTOMATION ENGINE ================== #
 async def TranslateAndExecute(commands: list[str]):
     funcs = []
-
     for command in commands:
-        print(f"Processing command: {command}")
-        
         if command.startswith("open "):
             app_name = command.removeprefix("open ").strip()
-            fun = asyncio.to_thread(OpenApp, app_name)
-            funcs.append(fun)
+            funcs.append(asyncio.to_thread(OpenApp, app_name))
         elif command.startswith("close "):
-            app_name = command.removeprefix("close ").strip()
-            fun = asyncio.to_thread(CloseApp, app_name)
-            funcs.append(fun)
+            funcs.append(asyncio.to_thread(CloseApp, command.removeprefix("close ").strip()))
         elif command.startswith("play "):
-            query = command.removeprefix("play ").strip()
-            fun = asyncio.to_thread(PlayYoutube, query)
-            funcs.append(fun)
+            funcs.append(asyncio.to_thread(PlayYoutube, command.removeprefix("play ").strip()))
         elif command.startswith("content "):
-            topic = command.removeprefix("content ").strip()
-            fun = asyncio.to_thread(Content, topic)
-            funcs.append(fun)
+            funcs.append(asyncio.to_thread(Content, command.removeprefix("content ").strip()))
         elif command.startswith("google search "):
-            query = command.removeprefix("google search ").strip()
-            fun = asyncio.to_thread(GoogleSearch, query)
-            funcs.append(fun)
+            funcs.append(asyncio.to_thread(GoogleSearch, command.removeprefix("google search ").strip()))
         elif command.startswith("youtube search "):
-            query = command.removeprefix("youtube search ").strip()
-            fun = asyncio.to_thread(YouTubeSearch, query)
-            funcs.append(fun)
+            funcs.append(asyncio.to_thread(YouTubeSearch, command.removeprefix("youtube search ").strip()))
         elif command.startswith("system "):
-            sys_command = command.removeprefix("system ").strip()
-            fun = asyncio.to_thread(System, sys_command)
-            funcs.append(fun)
+            funcs.append(asyncio.to_thread(System, command.removeprefix("system ").strip()))
         else:
             print(f"No function found for command: {command}")
 
@@ -324,29 +247,28 @@ async def TranslateAndExecute(commands: list[str]):
         results = await asyncio.gather(*funcs, return_exceptions=True)
         for i, result in enumerate(results):
             if isinstance(result, Exception):
-                print(f"Command {i+1} failed with exception: {result}")
+                print(f"Command {i+1} failed: {result}")
             else:
                 print(f"Command {i+1} result: {result}")
             yield result
-    else:
-        print("No valid commands to execute")
-
 
 async def Automation(commands: list[str]):
-    print(f"Starting automation with commands: {commands}")
     results = []
     async for result in TranslateAndExecute(commands):
         results.append(result)
     print(f"Automation completed. Results: {results}")
     return True
 
-
-# if __name__ == "__main__":
-#     # Test with some commands
-#     test_commands = [
-#         "open notepad", 
-#         " content application for sick leave"
-#     ]
-    
-#     print("Testing automation...")
-#     asyncio.run(Automation(test_commands))
+# ================== TEST ================== #
+if __name__ == "__main__":
+    test_commands = [
+        "system volume 30%",
+        "system brightness 40%",
+        "system battery",
+        "open notepad",
+        "open github web",
+        "open whatsapp",
+        "open instagram app",
+        "play bollywood songs"
+    ]
+    asyncio.run(Automation(test_commands))
